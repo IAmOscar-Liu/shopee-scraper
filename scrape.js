@@ -206,4 +206,4 @@ async function main({ data, titleClass, priceClass, deliverClass }, win) {
 }
 
 // main();
-module.exports = main;
+module.exports = { scrape: main };

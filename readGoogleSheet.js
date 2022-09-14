@@ -45,7 +45,7 @@ const getData = async ({
   for (let row of rows) {
     const rawData = row._rawData;
     if (
-      /是|yes|true/i.test(rawData[shouldScrapeIdx]) &&
+      /是|yes|true/i.test(rawData[shouldScrapeIdx] || "") &&
       rawData[productNameIdx] &&
       urlIdxes
         .map((idx) => rawData[idx])

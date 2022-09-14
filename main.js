@@ -1,11 +1,11 @@
 const { app, BrowserWindow, ipcMain, dialog } = require("electron");
 const path = require("path");
 const settings = require("electron-settings");
-const scrape = require("./scrape");
+const { scrape } = require("./scrape");
 const { createModalHtml } = require("./createModalHtml");
 const { readExcelFile } = require("./readExcelFile");
 const { downloadExcelFile } = require("./downloadExcelFile");
-const { readGoogleSheet } = require("./readGogleSheet");
+const { readGoogleSheet } = require("./readGoogleSheet");
 let win, modalWin;
 let isScraping = false;
 
