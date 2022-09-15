@@ -1,5 +1,6 @@
 const puppeteer = require("puppeteer-core");
 const os = require("os");
+const fs = require("fs");
 
 // console.log(os.platform());
 
@@ -8,6 +9,14 @@ const os = require("os");
 //   "https://shopee.tw/%E5%A5%BD%E8%87%AA%E5%9C%A8%E4%B9%BE%E7%88%BD%E7%9E%AC%E6%BD%94-%E7%B5%B2%E8%96%84%E8%AD%B7%E7%BF%BC%E6%97%A5%E7%94%A8%E8%A1%9B%E7%94%9F%E6%A3%89-24cmX52%E7%89%87%E3%80%90%E6%84%9B%E8%B2%B7%E3%80%91-i.19788054.1198519561?sp_atk=e63a84bb-8993-48dd-86e3-b0049dd6543e&xptdk=e63a84bb-8993-48dd-86e3-b0049dd6543e",
 //   "https://shopee.tw/%E8%98%87%E8%8F%B2%E5%BD%88%E5%8A%9B%E8%B2%BC%E8%BA%AB%E8%B6%85%E8%96%84%E9%AB%94%E8%B2%BC%E8%A1%9B%E7%94%9F%E6%A3%89%E6%97%A5%E7%94%A823%E5%A4%9C%E7%94%A828%E7%AB%8B%E9%AB%94%E6%9F%94%E8%B2%BC%E9%98%B2%E6%BC%8F23%E9%87%8F%E5%B0%91%E5%9E%8B-17.5%E8%B6%85%E7%86%9F%E7%9D%A141.5-35-%E5%85%A7%E8%A4%B2%E5%9E%8B-%E8%8D%89%E6%9C%AC%E6%8A%91%E8%8F%8C-%E8%B6%85%E8%BC%95%E6%9F%94-i.21483839.471210895?sp_atk=c41b8e89-ecf6-4eb3-8635-d4f0d050e96d&xptdk=c41b8e89-ecf6-4eb3-8635-d4f0d050e96d",
 // ];
+
+function getChromeExeFilePath() {
+  const defaultPath =
+    "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe";
+
+  if (fs.existsSync(defaultPath)) return defaultPath;
+  return "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
+}
 
 function waitFor(time) {
   return new Promise((resolve, reject) => {
@@ -156,7 +165,7 @@ async function handleBrowser(_data, win, titleClass, priceClass, deliverClass) {
     executablePath:
       os.platform() === "darwin"
         ? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
-        : "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
+        : getChromeExeFilePath(),
     headless: true, // 無外殼的 Chrome，有更佳的效能
   });
   const page = await browser.newPage();
