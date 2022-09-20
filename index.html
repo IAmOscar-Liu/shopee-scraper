@@ -6,9 +6,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Document</title>
     <style>
+      ul {
+        list-style: none;
+        margin-inline: 30px;
+        padding-inline: 0;
+      }
       li {
         display: grid;
-        grid-template-columns: auto 150px 250px;
+        grid-template-columns: 3fr 60px 2fr 80px 200px;
       }
       li p.index span,
       li p.status span:last-of-type {
@@ -16,7 +21,8 @@
         color: blue;
         cursor: pointer;
       }
-      li p.title {
+      li p.title,
+      li p.delivery-keyword {
         white-space: nowrap;
         overflow: hidden;
         display: block;
@@ -32,19 +38,30 @@
     <label for="product-name">商品全名的class</label>
     <input id="product-name" type="text" />
     <label for="product-price">商品價格的class</label>
-    <input id="product-price" type="text" />
+    <input id="product-price" type="text" /><br />
     <label for="product-deliver">運送的class</label>
     <input id="product-deliver" type="text" />
+    <label for="product-number">數量的class</label>
+    <input id="product-number" type="text" />
+    <label for="product-shop">查看賣場的class</label>
+    <input id="product-shop" type="text" />
     <button id="reset-name-and-price">重設</button><br />
     <button style="margin-top: 10px; margin-bottom: 8px" id="read-excel-file">
       Select xlsx file
     </button>
     <span id="read-excel-file-info"></span>
     <br />
-    <label for="google-sheet-url-input" style="margin-right: 5px">Or enter google sheet url</label>
-    <input type="text" style="width: 600px; margin-right: 5px" id="google-sheet-url-input" placeholder="Enter google sheet's url">
-    <button id="read-google-sheet">OK</button><br/>
-    <p id="read-google-sheet-info" style="display: none"></p>    
+    <label for="google-sheet-url-input" style="margin-right: 5px"
+      >Or enter google sheet url</label
+    >
+    <input
+      type="text"
+      style="width: 600px; margin-right: 5px"
+      id="google-sheet-url-input"
+      placeholder="Enter google sheet's url"
+    />
+    <button id="read-google-sheet">OK</button><br />
+    <p id="read-google-sheet-info" style="display: none"></p>
     <button style="margin-top: 10px" id="start-scraping" disabled>
       Start scraping
     </button>

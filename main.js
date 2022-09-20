@@ -91,20 +91,32 @@ ipcMain.handle("getTitleAndPriceClass", (e) => {
       : "_2Shl1j",
     deliverClass: settings.hasSync("key.deliverClass")
       ? settings.getSync("key.deliverClass")
-      : "_3ihqr8"  
+      : "_3ihqr8",
+    shopClass: settings.hasSync("key.shopClass")
+      ? settings.setSync("key.shopClass")
+      : "_2xDNx7",
+    numberClass: settings.hasSync("key.numberClass")
+      ? settings.setSync("key.numberClass")
+      : "_283ldj",
   };
 });
 
-ipcMain.on("setTitleAndPriceClass", (e, titleClass, priceClass, deliverClass) => {
-  settings.setSync("key", {
-    titleClass,
-    priceClass,
-    deliverClass
-  });
-  dialog.showMessageBox(null, {
-    message: "Successfully reset the class of product title, product price and product delivery",
-  });
-});
+ipcMain.on(
+  "setTitleAndPriceClass",
+  (e, titleClass, priceClass, deliverClass, shopClass, numberClass) => {
+    settings.setSync("key", {
+      titleClass,
+      priceClass,
+      deliverClass,
+      shopClass,
+      numberClass,
+    });
+    dialog.showMessageBox(null, {
+      message:
+        "Successfully reset the class of product title, product price, product delivery, product number and seeing shop",
+    });
+  }
+);
 
 ipcMain.on("api_start_scraping", async (e, data) => {
   // console.log(`data received in main: ${data}`);

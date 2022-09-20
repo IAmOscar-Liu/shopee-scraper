@@ -21,6 +21,7 @@
     "cheerio": "^1.0.0-rc.12",
     "electron-settings": "^4.0.2",
     "google-spreadsheet": "^3.3.0",
+    "puppeteer": "^18.0.1",
     "puppeteer-core": "^15.5.0",
     "xlsx": "^0.18.5"
   },

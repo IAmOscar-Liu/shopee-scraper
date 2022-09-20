@@ -1,4 +1,5 @@
 const puppeteer = require("puppeteer-core");
+const { scrapeMonthlySales } = require("./scrapeMonthlySales");
 const os = require("os");
 const fs = require("fs");
 
@@ -31,7 +32,9 @@ async function getData(
   win,
   titleClass,
   priceClass,
-  deliverClass
+  deliverClass,
+  shopClass,
+  numberClass
 ) {
   win.webContents.send("receive_data", {
     product_idx,
@@ -117,16 +120,16 @@ async function getData(
     msg:
       productVariations && productVariations.length > 0
         ? `scraping for variation 1/${productVariations.length}`
-        : "done",
-    msgColor:
-      productVariations && productVariations.length > 0 ? "orange" : "green",
+        : "scraping monthly sales",
+    msgColor: "orange",
   });
 
+  await waitFor(300);
+
   if (!productVariations || productVariations.length === 0) {
+    await scrapeMonthlySales(product_idx, win, page, title, shopClass);
     return;
   }
-
-  await waitFor(300);
 
   for (let varIdx = 0; varIdx < productVariations.length; varIdx++) {
     const variation = productVariations[varIdx];
@@ -138,6 +141,10 @@ async function getData(
       "." + priceClass,
       (el) => el.innerText
     );
+    const variationNumber = await page.$eval(
+      "." + numberClass,
+      (el) => el.innerText || ""
+    );
     // console.log("  " + variation.content + ": " + variationPrice);
     win.webContents.send("receive_data", {
       product_idx,
@@ -146,19 +153,32 @@ async function getData(
         varIdx,
         content: variation.content,
         price: variationPrice,
+        number:
+          variationNumber.split(/\n/).find((c) => c.includes("還剩")) ||
+          "未知數量",
       },
       msg:
         varIdx + 1 === productVariations.length
-          ? "done"
+          ? "scraping for monthly sales"
           : `scraping for variation ${varIdx + 2}/${productVariations.length}`,
-      msgColor: varIdx + 1 === productVariations.length ? "green" : "orange",
+      msgColor: "orange",
     });
 
     await waitFor(100);
   }
+
+  await scrapeMonthlySales(product_idx, win, page, title, shopClass);
 }
 
-async function handleBrowser(_data, win, titleClass, priceClass, deliverClass) {
+async function handleBrowser(
+  _data,
+  win,
+  titleClass,
+  priceClass,
+  deliverClass,
+  shopClass,
+  numberClass
+) {
   if (_data.length === 0 || win === null) return;
 
   const browser = await puppeteer.launch({
@@ -168,6 +188,11 @@ async function handleBrowser(_data, win, titleClass, priceClass, deliverClass) {
         : getChromeExeFilePath(),
     headless: true, // 無外殼的 Chrome，有更佳的效能
   });
+
+  await browser
+    .defaultBrowserContext()
+    .overridePermissions("https://shopee.tw/", ["geolocation"]);
+
   const page = await browser.newPage();
 
   while (_data.length > 0 && win !== null) {
@@ -180,7 +205,9 @@ async function handleBrowser(_data, win, titleClass, priceClass, deliverClass) {
         win,
         titleClass,
         priceClass,
-        deliverClass
+        deliverClass,
+        shopClass,
+        numberClass
       );
       // await waitFor(500);
     } catch (e) {
@@ -199,12 +226,39 @@ async function handleBrowser(_data, win, titleClass, priceClass, deliverClass) {
   browser.close();
 }
 
-async function main({ data, titleClass, priceClass, deliverClass }, win) {
+async function main(
+  { data, titleClass, priceClass, deliverClass, shopClass, numberClass },
+  win
+) {
   const dataWithIdx = data.map((d, data_idx) => ({ data_idx, data: d }));
   await Promise.all([
-    handleBrowser(dataWithIdx, win, titleClass, priceClass, deliverClass),
-    handleBrowser(dataWithIdx, win, titleClass, priceClass, deliverClass),
-    handleBrowser(dataWithIdx, win, titleClass, priceClass, deliverClass),
+    handleBrowser(
+      dataWithIdx,
+      win,
+      titleClass,
+      priceClass,
+      deliverClass,
+      shopClass,
+      numberClass
+    ),
+    handleBrowser(
+      dataWithIdx,
+      win,
+      titleClass,
+      priceClass,
+      deliverClass,
+      shopClass,
+      numberClass
+    ),
+    handleBrowser(
+      dataWithIdx,
+      win,
+      titleClass,
+      priceClass,
+      deliverClass,
+      shopClass,
+      numberClass
+    ),
   ]); // open 3 browser at the same time
 
   win.webContents.send("receive_data", {

@@ -9,8 +9,8 @@ contextBridge.exposeInMainWorld("electron", {
       // console.log(result.titleClass);
       return result;
     },
-    setTitleAndPriceClass: (titleClass, priceClass, deliverClass) => {
-      ipcRenderer.send("setTitleAndPriceClass", titleClass, priceClass, deliverClass);
+    setTitleAndPriceClass: (titleClass, priceClass, deliverClass, shopClass, numberClass) => {
+      ipcRenderer.send("setTitleAndPriceClass", titleClass, priceClass, deliverClass, shopClass, numberClass);
     },
     readExcelFile: () => {
       return ipcRenderer.invoke("read-excel-file");

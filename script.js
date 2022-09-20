@@ -1,13 +1,17 @@
 async function preloadTitleAndPriceClass(
   productTitleInput,
   productPriceInput,
-  productDeliverInput
+  productDeliverInput,
+  productShopInput,
+  productNumberInput
 ) {
-  const { titleClass, priceClass, deliverClass } =
+  const { titleClass, priceClass, deliverClass, shopClass, numberClass } =
     await electron.api.getTitleAndPriceClass();
   productTitleInput.value = titleClass; //  "_2rQP1z"
   productPriceInput.value = priceClass; // "_2Shl1j"
   productDeliverInput.value = deliverClass; // "_3ihqr8"
+  productShopInput.value = shopClass; //  "_2xDNx7"
+  productNumberInput.value = numberClass; // "_283ldj"
 }
 
 function openBrowserWindow(e) {
@@ -22,13 +26,21 @@ function printDataOnScreen(data) {
   });
 
   const ul = document.querySelector("ul");
-  ul.innerHTML = "";
+  ul.innerHTML = `<li style="border-bottom: 1px solid black">
+          <p class="title">商品名稱</p>
+          <p class="monthly-sales">月銷量</p>
+          <p class="delivery-keyword">免運費關鍵字</p>
+          <p class="index">賣場編號</p>
+          <p class="status">狀態</p>
+  </li>`;
 
   data.forEach((d, i) => {
     const li = document.createElement("li");
     li.id = `index-${i}`;
     li.innerHTML = `
           <p class="title">${d["商品"] || "承上"}</p>
+          <p class="monthly-sales"></p>
+          <p class="delivery-keyword"></p>
           <p class="index"><span data-url="${d["賣場網址"]}">賣場${
       d["賣場編號"]
     }</span></p>
@@ -55,31 +67,18 @@ const readGoogleSheetButton = document.getElementById("read-google-sheet");
 const productTitleInput = document.getElementById("product-name");
 const productPriceInput = document.getElementById("product-price");
 const productDeliverInput = document.getElementById("product-deliver");
+const productShopInput = document.getElementById("product-shop");
+const productNumberInput = document.getElementById("product-number");
 preloadTitleAndPriceClass(
   productTitleInput,
   productPriceInput,
-  productDeliverInput
+  productDeliverInput,
+  productShopInput,
+  productNumberInput
 );
 
 let writeData;
 let data;
-// const data = [
-//   {
-//     商品: "涼感衛生棉 日用 夜用 護墊 加長 量少 超長 透氣瞬吸 生理期 衛生巾 生理用品",
-//     賣場編號: 1,
-//     賣場網址: urls[0],
-//   },
-//   {
-//     商品: "好自在乾爽瞬潔-絲薄護翼日用衛生棉 24cmX52片【愛買】",
-//     賣場編號: 1,
-//     賣場網址: urls[1],
-//   },
-//   {
-//     商品: "蘇菲彈力貼身衛生棉日用23夜用28立體柔貼防漏 量少型 17.5超熟睡41.5 35 內褲型 草本抑菌 超輕柔 清新涼感",
-//     賣場編號: 1,
-//     賣場網址: urls[2],
-//   },
-// ];
 
 readExcelFileButton.addEventListener("click", async () => {
   const readExcelFileInfo = document.getElementById("read-excel-file-info");
@@ -150,7 +149,9 @@ document
     electron.api.setTitleAndPriceClass(
       productTitleInput.value,
       productPriceInput.value,
-      productDeliverInput.value
+      productDeliverInput.value,
+      productShopInput.value,
+      productNumberInput.value
     );
   });
 
@@ -163,6 +164,8 @@ startScrapingButton.addEventListener("click", (e) => {
     titleClass: productTitleInput.value,
     priceClass: productPriceInput.value,
     deliverClass: productDeliverInput.value,
+    shopClass: productShopInput.value,
+    numberClass: productNumberInput.value,
   });
 });
 
@@ -179,7 +182,8 @@ electron.api.on("receive_data", (receiveData) => {
   if (
     receiveData.type === "start new product" ||
     receiveData.type === "title & price" ||
-    receiveData.type === "variation"
+    receiveData.type === "variation" ||
+    receiveData.type === "monthly sales"
   ) {
     if (receiveData.type === "title & price") {
       data[receiveData.product_idx]["商品全名"] = receiveData.payload.title;
@@ -196,7 +200,12 @@ electron.api.on("receive_data", (receiveData) => {
         varIdx: receiveData.payload.varIdx,
         content: receiveData.payload.content,
         price: receiveData.payload.price,
+        number: receiveData.payload.number,
       });
+    } else if (receiveData.type === "monthly sales") {
+      console.log("monthly sales", receiveData);
+      data[receiveData.product_idx]["monthly_sales"] =
+        receiveData.payload.sales;
     }
 
     if (el.innerText !== "error") {
@@ -223,11 +232,13 @@ electron.api.on("receive_data", (receiveData) => {
         免運費關鍵字: d["免運費關鍵字"] || "",
         免運費細節: d["免運費細節"] || "",
         商品價格: d["商品價格"] || "",
+        月銷量: d["monthly_sales"] || "找不到",
       };
       if (d.variation && d.variation.length > 0) {
         for (let vIdx = 0; vIdx < d.variation.length; vIdx++) {
-          newRow[`Variation ${vIdx + 1} title`] = d.variation[vIdx].content;
-          newRow[`Variation ${vIdx + 1} price`] = d.variation[vIdx].price;
+          newRow[`規格${vIdx + 1}`] = d.variation[vIdx].content;
+          newRow[`規格${vIdx + 1}價錢`] = d.variation[vIdx].price;
+          newRow[`規格${vIdx + 1}庫存`] = d.variation[vIdx].number;
         }
       }
       return newRow;
@@ -236,9 +247,14 @@ electron.api.on("receive_data", (receiveData) => {
     if (writeData && writeData.length > 0) {
       downloadExcelFileButton.style.display = "block";
       document.querySelectorAll("ul li").forEach((li) => {
+        if (!li.id) return;
         const liIdx = li.id.replace("index-", "");
         const pStatus = li.querySelector("p.status");
+        const pMonthlySales = li.querySelector("p.monthly-sales");
+        const pDeliveryKeyword = li.querySelector("p.delivery-keyword");
         if (pStatus.innerText !== "error") {
+          pMonthlySales.innerHTML = data[liIdx]["monthly_sales"];
+          pDeliveryKeyword.innerHTML = data[liIdx]["免運費關鍵字"];
           pStatus.innerHTML = `<span style="color: green">done</span><span style="margin-left: 12px">Detail</span>`;
           li.querySelector("p.status span:last-of-type").onclick = function () {
             // console.log(data[liIdx]);
