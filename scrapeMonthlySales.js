@@ -3,7 +3,7 @@ const scrapeMonthlySales = async (product_idx, win, page, title, shopClass) => {
     const shopBtnPath = `.${shopClass} > a`;
 
     if (!(await page.$(shopBtnPath)))
-      throw new Error("Can' find '查看賣場' button");
+      throw new Error("Cannot find '查看賣場' button");
 
     const aLink = await page.$eval(shopBtnPath, (a) => a.href);
 
