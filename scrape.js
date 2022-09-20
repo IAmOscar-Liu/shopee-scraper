@@ -47,7 +47,8 @@ async function getData(
   // await page.waitFor(2000); // 等待一秒
   await page.waitForSelector("." + titleClass); // 確定商品全名出現
   await page.waitForSelector("." + priceClass); // 確定商品價格出現
-  await page.waitForSelector("." + deliverClass); // 確定運費出現
+  await page.waitForSelector("." + deliverClass); // 確定商品運費出現
+  await page.waitForSelector("." + numberClass); // 確定商品數量出現
 
   // const data = await page.content();
 
