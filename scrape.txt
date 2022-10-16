@@ -1,5 +1,8 @@
+
 const puppeteer = require("puppeteer-core");
+const { scrapeMonthlySales } = require("./scrapeMonthlySales");
 const os = require("os");
+const fs = require("fs");
 
 // console.log(os.platform());
 
@@ -9,37 +12,88 @@ const os = require("os");
 //   "https://shopee.tw/%E8%98%87%E8%8F%B2%E5%BD%88%E5%8A%9B%E8%B2%BC%E8%BA%AB%E8%B6%85%E8%96%84%E9%AB%94%E8%B2%BC%E8%A1%9B%E7%94%9F%E6%A3%89%E6%97%A5%E7%94%A823%E5%A4%9C%E7%94%A828%E7%AB%8B%E9%AB%94%E6%9F%94%E8%B2%BC%E9%98%B2%E6%BC%8F23%E9%87%8F%E5%B0%91%E5%9E%8B-17.5%E8%B6%85%E7%86%9F%E7%9D%A141.5-35-%E5%85%A7%E8%A4%B2%E5%9E%8B-%E8%8D%89%E6%9C%AC%E6%8A%91%E8%8F%8C-%E8%B6%85%E8%BC%95%E6%9F%94-i.21483839.471210895?sp_atk=c41b8e89-ecf6-4eb3-8635-d4f0d050e96d&xptdk=c41b8e89-ecf6-4eb3-8635-d4f0d050e96d",
 // ];
 
+function getChromeExeFilePath() {
+  const defaultPath =
+    "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe";
+
+  if (fs.existsSync(defaultPath)) return defaultPath;
+  return "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
+}
+
 function waitFor(time) {
   return new Promise((resolve, reject) => {
     setTimeout(() => resolve(), time);
   });
 }
 
-async function getData(page, url, product_idx, win, titleClass, priceClass) {
+async function getData(
+  page,
+  url,
+  product_idx,
+  win,
+  titleClass,
+  priceClass,
+  deliverClass,
+  shopClass,
+  numberClass
+) {
   win.webContents.send("receive_data", {
     product_idx,
     type: "start new product",
     msg: "scraping......",
+    msgColor: "orange",
   });
 
-  // const browser = await puppeteer.launch({
-  //   executablePath:
-  //     os.platform() === "darwin"
-  //       ? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
-  //       : "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
-  //   headless: true, // 無外殼的 Chrome，有更佳的效能
-  // });
-  // const page = await browser.newPage();
   await page.goto(url);
   // await page.waitFor(2000); // 等待一秒
-  await page.waitForSelector("." + titleClass); // 確定網頁的元素出現
+  await page.waitForSelector("." + titleClass); // 確定商品全名出現
+  await page.waitForSelector("." + priceClass); // 確定商品價格出現
+  await page.waitForSelector("." + deliverClass); // 確定商品運費出現
+  await page.waitForSelector("." + numberClass); // 確定商品數量出現
 
   // const data = await page.content();
 
   const title = await page.$eval(`.${titleClass} > span`, (el) => el.innerText);
   const price = await page.$eval(`.${priceClass}`, (el) => el.innerText);
-  // console.log("title: ", title);
-  // console.log("price:", price);
+
+  // 檢查運費
+  const hasFreeDelivery = await page.$eval("." + deliverClass, (el) => {
+    if (!el.childNodes) return "";
+    if (el.childNodes.length < 2) return "";
+
+    let returnStrArr = [];
+    for (
+      let childNodeIdx = 0;
+      childNodeIdx < el.childNodes.length - 1;
+      childNodeIdx++
+    ) {
+      returnStrArr.push(
+        (el.childNodes[childNodeIdx].innerText || "").replaceAll(/\n/g, " ")
+      );
+    }
+    return returnStrArr.join(" ");
+  });
+  let freeDeliveryDetails = "";
+  const deliverDetailHoverJSPath = `.${deliverClass} > *:last-child > *:last-child > *:last-child > *:last-child > *`;
+  // const deliverDetailPopupJSPath = ".shopee-drawer__contents > div > *";
+  const deliverDetailPopupJSPath =
+    deliverDetailHoverJSPath + " > *:last-child > div > *";
+  if (hasFreeDelivery && page.$(deliverDetailHoverJSPath)) {
+    await page.hover(deliverDetailHoverJSPath);
+    await waitFor(200);
+    if (page.$(deliverDetailPopupJSPath)) {
+      const deliverDetails = await page.$$eval(
+        deliverDetailPopupJSPath,
+        (cards) => cards.map((c) => c.innerText || "")
+      );
+      freeDeliveryDetails = deliverDetails
+        .filter((c) => !!c)
+        .map((c, cIdx) => `(${cIdx + 1}). ${c.replaceAll(/\n/g, " ")}`)
+        .join(" ");
+    }
+    await page.mouse.move(10, 10); // 把滑鼠移開以免點不到variation的按鈕
+  }
+  // hasFreeDelivery, freeDeliveryDetails
 
   const productVariations = await page.$$eval(
     ".product-variation",
@@ -62,27 +116,36 @@ async function getData(page, url, product_idx, win, titleClass, priceClass) {
     payload: {
       title,
       price,
+      hasFreeDelivery,
+      freeDeliveryDetails,
     },
     msg:
       productVariations && productVariations.length > 0
         ? `scraping for variation 1/${productVariations.length}`
-        : "done",
+        : "scraping monthly sales",
+    msgColor: "orange",
   });
-
-  if (!productVariations || productVariations.length === 0) {
-    // await browser.close();
-    return;
-  }
 
   await waitFor(300);
 
+  if (!productVariations || productVariations.length === 0) {
+    await scrapeMonthlySales(product_idx, win, page, title, shopClass);
+    return;
+  }
+
   for (let varIdx = 0; varIdx < productVariations.length; varIdx++) {
     const variation = productVariations[varIdx];
-    await page.click(`.product-variation:nth-of-type(${variation.idx + 1})`);
+    const variationButtons = await page.$$(".product-variation");
+    await variationButtons[variation.idx].click();
+    //await page.click(`.product-variation:nth-of-type(${variation.idx + 1})`);
     await waitFor(varIdx === 0 ? 250 : 100);
     const variationPrice = await page.$eval(
       "." + priceClass,
       (el) => el.innerText
+    );
+    const variationNumber = await page.$eval(
+      "." + numberClass,
+      (el) => el.innerText || ""
     );
     // console.log("  " + variation.content + ": " + variationPrice);
     win.webContents.send("receive_data", {
@@ -92,57 +155,120 @@ async function getData(page, url, product_idx, win, titleClass, priceClass) {
         varIdx,
         content: variation.content,
         price: variationPrice,
+        number:
+          variationNumber.split(/\n/).find((c) => c.includes("還剩")) ||
+          "未知數量",
       },
       msg:
         varIdx + 1 === productVariations.length
-          ? "done"
+          ? "scraping for monthly sales"
           : `scraping for variation ${varIdx + 2}/${productVariations.length}`,
+      msgColor: "orange",
     });
 
     await waitFor(100);
   }
 
-  // await browser.close();
-  // processData(data);
+  await scrapeMonthlySales(product_idx, win, page, title, shopClass);
 }
 
-async function main({ data, titleClass, priceClass }, win) {
-  // win.webContents.send("api_receive", `${data} pong 1`);
+async function handleBrowser(
+  _data,
+  win,
+  titleClass,
+  priceClass,
+  deliverClass,
+  shopClass,
+  numberClass
+) {
+  if (_data.length === 0 || win === null) return;
+
   const browser = await puppeteer.launch({
     executablePath:
       os.platform() === "darwin"
         ? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
-        : "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
+        : getChromeExeFilePath(),
     headless: true, // 無外殼的 Chrome，有更佳的效能
   });
+
+  await browser
+    .defaultBrowserContext()
+    .overridePermissions("https://shopee.tw/", ["geolocation"]);
+
   const page = await browser.newPage();
 
-  for (let i = 0; i < data.length; i++) {
-    if (win === null) break;
+  while (_data.length > 0 && win !== null) {
+    const { data, data_idx } = _data.shift();
     try {
-      await getData(page, data[i]["賣場網址"], i, win, titleClass, priceClass);
-      // await new Promise((resolve, reject) => {
-      //   setTimeout(() => resolve(), 1000);
-      // });
+      await getData(
+        page,
+        data["賣場網址"],
+        data_idx,
+        win,
+        titleClass,
+        priceClass,
+        deliverClass,
+        shopClass,
+        numberClass
+      );
+      // await waitFor(500);
     } catch (e) {
       win.webContents.send("receive_data", {
-        product_idx: i,
+        product_idx: data_idx,
         type: "error",
         payload: {
           errMsg: e.message,
+          url: data["賣場網址"],
         },
         msg: "error",
+        msgColor: "red",
       });
     }
-    await waitFor(500);
   }
+  browser.close();
+}
+
+async function main(
+  { data, titleClass, priceClass, deliverClass, shopClass, numberClass },
+  win
+) {
+  const dataWithIdx = data.map((d, data_idx) => ({ data_idx, data: d }));
+  await Promise.all([
+    handleBrowser(
+      dataWithIdx,
+      win,
+      titleClass,
+      priceClass,
+      deliverClass,
+      shopClass,
+      numberClass
+    ),
+    handleBrowser(
+      dataWithIdx,
+      win,
+      titleClass,
+      priceClass,
+      deliverClass,
+      shopClass,
+      numberClass
+    ),
+    handleBrowser(
+      dataWithIdx,
+      win,
+      titleClass,
+      priceClass,
+      deliverClass,
+      shopClass,
+      numberClass
+    ),
+  ]); // open 3 browser at the same time
+
   win.webContents.send("receive_data", {
     product_idx: 1000000,
     type: "done",
   });
-
-  browser.close();
+  // browser.close();
 }
 
 // main();
-module.exports = main;
+module.exports = { scrape: main };

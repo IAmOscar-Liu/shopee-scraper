@@ -1,17 +1,48 @@
-async function preloadTitleAndPriceClass(
-  productTitleInput,
-  productPriceInput,
-  productDeliverInput,
-  productShopInput,
-  productNumberInput
+function getItemIdAndShopId(url) {
+  const firstPart = url.split("?")[0];
+
+  const itemIdAndShopId = firstPart.split("-i")[1];
+  if (!itemIdAndShopId) throw "Invalid url";
+
+  const ansArr = itemIdAndShopId.slice(1).split(".");
+  if (ansArr.length !== 2) throw "Invalid url";
+  return {
+    shopid: ansArr[0],
+    itemid: ansArr[1],
+  };
+}
+
+function updateHowToGetCookie(howToGetCookie, shopid, itemid) {
+  const apiUrl = `https://shopee.tw/api/v4/pdp/get_shipping?buyer_zipcode=&city=%E4%B8%AD%E6%AD%A3%E5%8D%80&district=&itemid=${itemid}&shopid=${shopid}&state=%E8%87%BA%E5%8C%97%E5%B8%82&town=`;
+  howToGetCookie.innerHTML = `
+      請先確定登入蝦皮帳戶，再到下面網址<br/>
+      <span style="cursor: pointer; color: blue; text-decoration: underline; white-space: nowrap; overflow: hidden; display: block; text-overflow: ellipsis;">${apiUrl}</span>
+      然後按ctrl + shift + i開啟DevTools<br/>
+      1. 在DevTools中選擇Network，按F5重新整理一次<br/>
+      2. 在Network中點選裡面唯一一筆資料，右邊跳出來的視窗選Headers<br/>
+      3. 在Headers中找到Request Headers，然後複製裡面cookie的內容<br/>
+      4. 最後，把複製的結果貼到下面的Request Cookie裡面，再按「重設」
+    `;
+  howToGetCookie.querySelector("span").onclick = function () {
+    electron.api.openBrowserWindow(apiUrl);
+  };
+}
+
+async function preloadTestUrlAndCookie(
+  requestUrlInput,
+  requestCookieInput,
+  howToGetCookie
 ) {
-  const { titleClass, priceClass, deliverClass, shopClass, numberClass } =
-    await electron.api.getTitleAndPriceClass();
-  productTitleInput.value = titleClass; //  "_2rQP1z"
-  productPriceInput.value = priceClass; // "_2Shl1j"
-  productDeliverInput.value = deliverClass; // "_3ihqr8"
-  productShopInput.value = shopClass; //  "_2xDNx7"
-  productNumberInput.value = numberClass; // "_283ldj"
+  const { url, cookie } = await electron.api.getTestUrlAndCookie();
+  requestUrlInput.value = url;
+  requestCookieInput.value = cookie;
+
+  try {
+    const { shopid, itemid } = getItemIdAndShopId(url);
+    updateHowToGetCookie(howToGetCookie, shopid, itemid);
+  } catch (e) {
+    howToGetCookie.innerText = e.message;
+  }
 }
 
 function openBrowserWindow(e) {
@@ -64,18 +95,11 @@ const downloadExcelFileButton = document.getElementById("download-excel-file");
 const readExcelFileButton = document.getElementById("read-excel-file");
 const readGoogleSheetButton = document.getElementById("read-google-sheet");
 
-const productTitleInput = document.getElementById("product-name");
-const productPriceInput = document.getElementById("product-price");
-const productDeliverInput = document.getElementById("product-deliver");
-const productShopInput = document.getElementById("product-shop");
-const productNumberInput = document.getElementById("product-number");
-preloadTitleAndPriceClass(
-  productTitleInput,
-  productPriceInput,
-  productDeliverInput,
-  productShopInput,
-  productNumberInput
-);
+const requestUrlInput = document.getElementById("request-url");
+const requestCookieInput = document.getElementById("request-cookie");
+const howToGetCookie = document.getElementById("how-to-get-cookie");
+
+preloadTestUrlAndCookie(requestUrlInput, requestCookieInput, howToGetCookie);
 
 let writeData;
 let data;
@@ -143,17 +167,25 @@ readGoogleSheetButton.addEventListener("click", async () => {
   startScrapingButton.disabled = false;
 });
 
-document
-  .getElementById("reset-name-and-price")
-  .addEventListener("click", () => {
-    electron.api.setTitleAndPriceClass(
-      productTitleInput.value,
-      productPriceInput.value,
-      productDeliverInput.value,
-      productShopInput.value,
-      productNumberInput.value
-    );
-  });
+document.getElementById("reset-url").addEventListener("click", () => {
+  electron.api.setTestUrlAndCookie(
+    requestUrlInput.value,
+    requestCookieInput.value
+  );
+  try {
+    const { shopid, itemid } = getItemIdAndShopId(requestUrlInput.value);
+    updateHowToGetCookie(howToGetCookie, shopid, itemid);
+  } catch (e) {
+    howToGetCookie.innerText = e.message;
+  }
+});
+
+document.getElementById("reset-cookie").addEventListener("click", () => {
+  electron.api.setTestUrlAndCookie(
+    requestUrlInput.value,
+    requestCookieInput.value
+  );
+});
 
 startScrapingButton.addEventListener("click", (e) => {
   e.target.disabled = true;
@@ -161,11 +193,7 @@ startScrapingButton.addEventListener("click", (e) => {
   readGoogleSheetButton.disabled = true;
   electron.api.startScraping("api_start_scraping", {
     data,
-    titleClass: productTitleInput.value,
-    priceClass: productPriceInput.value,
-    deliverClass: productDeliverInput.value,
-    shopClass: productShopInput.value,
-    numberClass: productNumberInput.value,
+    cookie: requestCookieInput.value,
   });
 });
 
@@ -181,31 +209,21 @@ electron.api.on("receive_data", (receiveData) => {
 
   if (
     receiveData.type === "start new product" ||
-    receiveData.type === "title & price" ||
-    receiveData.type === "variation" ||
-    receiveData.type === "monthly sales"
+    receiveData.type === "item results" ||
+    receiveData.type === "shipping info"
   ) {
-    if (receiveData.type === "title & price") {
+    if (receiveData.type === "item results") {
       data[receiveData.product_idx]["商品全名"] = receiveData.payload.title;
       data[receiveData.product_idx]["商品價格"] = receiveData.payload.price;
+      data[receiveData.product_idx]["月銷量"] = receiveData.payload.sales;
+      data[receiveData.product_idx]["商品庫存"] = receiveData.payload.number;
+      data[receiveData.product_idx]["variation"] =
+        receiveData.payload.variations;
+    } else if (receiveData.type === "shipping info") {
       data[receiveData.product_idx]["免運費關鍵字"] =
         receiveData.payload.hasFreeDelivery;
       data[receiveData.product_idx]["免運費細節"] =
         receiveData.payload.freeDeliveryDetails;
-    } else if (receiveData.type === "variation") {
-      if (!data[receiveData.product_idx]["variation"])
-        data[receiveData.product_idx]["variation"] = [];
-
-      data[receiveData.product_idx]["variation"].push({
-        varIdx: receiveData.payload.varIdx,
-        content: receiveData.payload.content,
-        price: receiveData.payload.price,
-        number: receiveData.payload.number,
-      });
-    } else if (receiveData.type === "monthly sales") {
-      console.log("monthly sales", receiveData);
-      data[receiveData.product_idx]["monthly_sales"] =
-        receiveData.payload.sales;
     }
 
     if (el.innerText !== "error") {
@@ -214,8 +232,10 @@ electron.api.on("receive_data", (receiveData) => {
     }
   } else if (receiveData.type === "error") {
     console.log("receiveData error", receiveData);
-    data[receiveData.product_idx]["商品全名"] = "無法找到商品全名";
-    data[receiveData.product_idx]["商品價格"] = "無法找到商品價格";
+    if (!data[receiveData.product_idx]["商品全名"]) {
+      data[receiveData.product_idx]["商品全名"] = "無法找到商品全名";
+      data[receiveData.product_idx]["商品價格"] = "無法找到商品價格";
+    }
     el.innerText = "error";
     el.style.color = receiveData.msgColor || "black";
   } else if (receiveData.type === "done") {
@@ -232,7 +252,8 @@ electron.api.on("receive_data", (receiveData) => {
         免運費關鍵字: d["免運費關鍵字"] || "",
         免運費細節: d["免運費細節"] || "",
         商品價格: d["商品價格"] || "",
-        月銷量: d["monthly_sales"] || "找不到",
+        月銷量: d["月銷量"] || "找不到",
+        總庫存: d["商品庫存"] || "找不到",
       };
       if (d.variation && d.variation.length > 0) {
         for (let vIdx = 0; vIdx < d.variation.length; vIdx++) {
@@ -253,7 +274,7 @@ electron.api.on("receive_data", (receiveData) => {
         const pMonthlySales = li.querySelector("p.monthly-sales");
         const pDeliveryKeyword = li.querySelector("p.delivery-keyword");
         if (pStatus.innerText !== "error") {
-          pMonthlySales.innerHTML = data[liIdx]["monthly_sales"];
+          pMonthlySales.innerHTML = data[liIdx]["月銷量"];
           pDeliveryKeyword.innerHTML = data[liIdx]["免運費關鍵字"];
           pStatus.innerHTML = `<span style="color: green">done</span><span style="margin-left: 12px">Detail</span>`;
           li.querySelector("p.status span:last-of-type").onclick = function () {

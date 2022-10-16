@@ -3,14 +3,11 @@ const shell = require("electron").shell;
 
 contextBridge.exposeInMainWorld("electron", {
   api: {
-    getTitleAndPriceClass: async () => {
-      const result = await ipcRenderer.invoke("getTitleAndPriceClass");
-      // console.log("result");
-      // console.log(result.titleClass);
-      return result;
+    getTestUrlAndCookie: async () => {
+      return ipcRenderer.invoke("getTestUrlAndCookie");
     },
-    setTitleAndPriceClass: (titleClass, priceClass, deliverClass, shopClass, numberClass) => {
-      ipcRenderer.send("setTitleAndPriceClass", titleClass, priceClass, deliverClass, shopClass, numberClass);
+    setTestUrlAndCookie: (url, cookie) => {
+      ipcRenderer.send("setTestUrlAndCookie", url, cookie);
     },
     readExcelFile: () => {
       return ipcRenderer.invoke("read-excel-file");
