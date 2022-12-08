@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog } = require("electron");
+const { app, BrowserWindow, ipcMain, dialog, shell } = require("electron");
 const path = require("path");
 const settings = require("electron-settings");
 const { scrape } = require("./scrape");
@@ -83,12 +83,12 @@ ipcMain.handle("read-google-sheet", (e, url) => {
 
 ipcMain.handle("getTestUrlAndCookie", (e) => {
   return {
-    url: settings.getSync("key.testUrl")
+    url: settings.hasSync("key.testUrl")
       ? settings.getSync("key.testUrl")
       : "https://shopee.tw/%E8%98%87%E8%8F%B2%E8%B6%85%E7%86%9F%E7%9D%A141.5%E5%85%AC%E5%88%86%E4%B9%BE%E7%88%BD%E7%B6%B2%E5%B1%A4-%E7%B4%B0%E7%B7%BB%E6%A3%89%E6%9F%94-i.15828725.4248457236?sp_atk=9b2e92bf-0943-46a7-b3f9-4fabe5cfc074&fbclid=IwAR1UBWR0TQbzU9IZulcUoyoPz87ftlub2MhNXIZEMufA7nVGejFwdobz-aY",
     cookie: settings.hasSync("key.testCookie")
       ? settings.getSync("key.testCookie")
-      : 'SPC_IA=-1; REC_T_ID=b6d127e7-4dc6-11eb-b3a7-48df37dda188; SPC_F=qqwFoYS6n5PBnhnQXfdXvdt7PjsUu013; REC_T_ID=b6dee5e2-4dc6-11eb-a739-b49691869054; __BWfp=c1609680145873xa5b751f2b; SC_DFP=PlCVGVdHlUVblnerGeox91eHcyd4pe6R; _gcl_au=1.1.2072460877.1658984790; _fbp=fb.1.1658984790577.1140682313; _med=refer; csrftoken=hE7WvBpeWMNedDOXFB14vlc4bpNbIo8N; _QPWSDCXHZQA=b7bc575e-1465-46bc-87f7-4632e58aeafb; __LOCALE__null=TW; cto_bundle=47WID19JeU5qWXpRUVJPaE9qRW9nYWRiUVlqWTZ2OGNkM1lQejU5Mmg1bjdycWs3c01zbUc5TFhwS3Q4eVM4ZVA5Y002ajdMZVI5SlRkUHhYTEZUJTJGM25LVHMlMkZmNSUyRlVETHZpQUExMW5vVkt1bzJLdDNDTnlQeEVIZEFsazZSbFg3YjJBS1hOR0phZjJJSDJIZW1IZ20lMkZjalZoQSUzRCUzRA; _gid=GA1.2.1564482495.1665833245; G_ENABLED_IDPS=google; G_AUTHUSER_H=0; SPC_CLIENTID=cXF3Rm9ZUzZuNVBCezosvjzoernjcmtf; SPC_ST=.QU5mRWFsd2tjanlFSU5jYjBkHTdCfV7g3yCMjaGdAKg/LVdV0xDEVux/NQp9VEtddyFHD7tQ6ELce+w5A/nBVXm4pwXfYvY2QTJ4Zxe8VOxSUy+W7u/ds8ryd5Oha5WmQx8+G3sJSEwQWr7MjXG9kE8Am1nVi5bGooWSeWkeSdqIAt+gIYO6EtD5cUG5xrKcsShzrFL2dLibVShx6mWdrQ==; SPC_U=883910780; SPC_T_ID=pYBZuBaRxWu53AtpNv5ymR3hLyUWbKHGrmtHDtwqwMJ3aHT+4B+e+WiYOUbFxzhhwT61kvY5RSZkWHvDUvEHnfIZZQT5S7fT7XzGwrxZqIztbWMI4q8PUmLF26ZAd1QQzL/KA7uPLVrPsDRzepXh2TP09Ynm1anrBU18oPYoMMg=; SPC_T_IV=eU1Zd3d5bUN6RXZKcHBWUQ==; SPC_T_IV="eU1Zd3d5bUN6RXZKcHBWUQ=="; SPC_T_ID="pYBZuBaRxWu53AtpNv5ymR3hLyUWbKHGrmtHDtwqwMJ3aHT+4B+e+WiYOUbFxzhhwT61kvY5RSZkWHvDUvEHnfIZZQT5S7fT7XzGwrxZqIztbWMI4q8PUmLF26ZAd1QQzL/KA7uPLVrPsDRzepXh2TP09Ynm1anrBU18oPYoMMg="; _fbc=fb.1.1665901682861.IwAR1UBWR0TQbzU9IZulcUoyoPz87ftlub2MhNXIZEMufA7nVGejFwdobz-aY; SPC_R_T_ID=pYBZuBaRxWu53AtpNv5ymR3hLyUWbKHGrmtHDtwqwMJ3aHT+4B+e+WiYOUbFxzhhwT61kvY5RSZkWHvDUvEHnfIZZQT5S7fT7XzGwrxZqIztbWMI4q8PUmLF26ZAd1QQzL/KA7uPLVrPsDRzepXh2TP09Ynm1anrBU18oPYoMMg=; SPC_R_T_IV=eU1Zd3d5bUN6RXZKcHBWUQ==; SPC_SI=7qlHYwAAAABFSHp1YnpqWcA2HAAAAAAATEF5Y0pOZjg=; ds=61f2d9045c9e7b91494f46e6384693c9; AMP_TOKEN=%24NOT_FOUND; _ga_RPSBE3TQZZ=GS1.1.1665920070.38.1.1665920106.24.0.0; _ga=GA1.1.262431808.1609680146; shopee_webUnique_ccd=QQl9aYK%2FdtXT8E1NPgvRhQ%3D%3D%7CGWDX72dQTqmBB1AgSgUbQ11bqBm80Qc6AXn6zSB75A5byNEtAyk%2BaDDPA9JnwdDiXbFGadIRfjCTC8fQr9iz8wkyUB7JCkMdkHG%2B%7Cyk7ik%2BpLFTw9Mm4C%7C06%7C3; SPC_EC=TmhOT0tDTmt5aUc1bnozMHJNTD6Yj/oG9aMZO3IDeEYO45/8r5x3XkNjkvSGyqMUboVV4F4uOXc/JSWD36i4jT+Gtumv8gO++2Ep0L4UU3q61Nv9cTEjHDxG6sfo6iwfIYRTimKRyhc5eTyGXbmAxt6pl5meB9ZgjsPehqgJf1k=',
+      : 'SPC_IA=-1; REC_T_ID=b6d127e7-4dc6-11eb-b3a7-48df37dda188; SPC_F=qqwFoYS6n5PBnhnQXfdXvdt7PjsUu013; REC_T_ID=b6dee5e2-4dc6-11eb-a739-b49691869054; __BWfp=c1609680145873xa5b751f2b; SC_DFP=PlCVGVdHlUVblnerGeox91eHcyd4pe6R; _fbp=fb.1.1658984790577.1140682313; csrftoken=hE7WvBpeWMNedDOXFB14vlc4bpNbIo8N; _QPWSDCXHZQA=b7bc575e-1465-46bc-87f7-4632e58aeafb; __LOCALE__null=TW; G_ENABLED_IDPS=google; G_AUTHUSER_H=0; SPC_CLIENTID=cXF3Rm9ZUzZuNVBCezosvjzoernjcmtf; SPC_T_IV="eU1Zd3d5bUN6RXZKcHBWUQ=="; SPC_T_ID="pYBZuBaRxWu53AtpNv5ymR3hLyUWbKHGrmtHDtwqwMJ3aHT+4B+e+WiYOUbFxzhhwT61kvY5RSZkWHvDUvEHnfIZZQT5S7fT7XzGwrxZqIztbWMI4q8PUmLF26ZAd1QQzL/KA7uPLVrPsDRzepXh2TP09Ynm1anrBU18oPYoMMg="; _fbc=fb.1.1665901682861.IwAR1UBWR0TQbzU9IZulcUoyoPz87ftlub2MhNXIZEMufA7nVGejFwdobz-aY; _gcl_au=1.1.1737244136.1667138053; SPC_SI=Mrh0YwAAAABKWWhhZ2RKdQIGMQQAAAAAUXN3V0tXRkQ=; _gid=GA1.2.840462054.1670509545; SPC_ST=.M0tQUXpYSzJNcHJPMldQYcl3axXvvUHzzwHCFzYMJvC4fVNhnVOzMavmCX0aQ0wxcKP4X03BlMzgUaZV37hgrdamna5sOHVw4vABE/t7vNcEssAkPfF6XRoZQB05mP+luO3RXv7jJ1YZvesWCTjhDNC0OnG4ZfVou7FHdbN9ue/TT/LeluxCrLFTP2+KKD7Zxr/hrJJX79MEdp0uN+9bSg==; _ga_CGXK257VSB=GS1.1.1670509970.2.0.1670509970.60.0.0; SPC_U=883910780; SPC_T_IV=bnNsZkREUGlwSDNaQmYzZA==; SPC_R_T_ID=qraidqzNQkjEoAaY1xSBFCTJoiZvGOG+6ekaJ+VlMTCXVv/tcX7aC0rzoAG3lseWL6wiJB4ZFvxLGKbcdlH43uner2RZV8VcrwDPW1jdWX/GBxuxkgDyDDIX49gC+2GmIVy/z0c64GanetrIeBXOGJrl9TrL/FuVXjLQTInY8qM=; SPC_R_T_IV=bnNsZkREUGlwSDNaQmYzZA==; SPC_T_ID=qraidqzNQkjEoAaY1xSBFCTJoiZvGOG+6ekaJ+VlMTCXVv/tcX7aC0rzoAG3lseWL6wiJB4ZFvxLGKbcdlH43uner2RZV8VcrwDPW1jdWX/GBxuxkgDyDDIX49gC+2GmIVy/z0c64GanetrIeBXOGJrl9TrL/FuVXjLQTInY8qM=; _ga=GA1.2.262431808.1609680146; shopee_webUnique_ccd=SERl1HmWmwKjVyImBHvrmg%3D%3D%7CzwB1NGTQQ6uw7imojqWILffBYMmkoDLMDyUcwrLQ5m4%2F1iqPWXRFNymdkt9mSLKLh02sdD1aIsXaedEK2d4YL9Y2lT3xH6f4Khlw%7CFOCY3n7vnKxBUC1c%7C06%7C3; ds=3708ffde4ee7982b0fd821ea34447698; cto_bundle=oMa4Bl9JeU5qWXpRUVJPaE9qRW9nYWRiUVlxcGF0dGtHJTJGWnBwRm9xc28zY2ZScHdaT2ZxOTgxSlRJakhuYVRUeElXdlZUMVElMkZ0a0FQbjNzbGo3STIlMkZUNGM4V045cTAzQW1hQWoycmxTalVmJTJCN1VRU1hkJTJGamlwcUJKYXRyNkRCcW5Zbjd1RzYzVWQ3JTJCbEZGc2c1Z0xGUzVESUElM0QlM0Q; _ga_RPSBE3TQZZ=GS1.1.1670520059.47.1.1670520061.58.0.0; SPC_EC=SklsejdQOG1hWkViMk11as32HFS3nXJWFUefyWAjPQ598D+mHJy8c3UdxXeM6Pax4hvyUvcA4CWRCBa8K1syDJmHIuu/nUEk92Y94DfzqZX2Ft39+pxRu8wGp6dZOZdmrGH06M2L4A/ffv1cHpHiuAhzA86Pq+I8+RvK9JH23UQ=',
   };
 });
 
@@ -99,7 +99,7 @@ ipcMain.on("setTestUrlAndCookie", (e, testUrl, testCookie) => {
     testUrl,
     testCookie,
   });
-  
+
   if (testCookie !== prevCookie) {
     dialog.showMessageBox(null, {
       message: "Successfully reset the cookie",
@@ -107,15 +107,50 @@ ipcMain.on("setTestUrlAndCookie", (e, testUrl, testCookie) => {
   }
 });
 
-ipcMain.on("api_start_scraping", async (e, data) => {
+ipcMain.handle("getElementClasses", (e) => {
+  const data = {
+    titleClass: settings.hasSync("key.titleClass")
+      ? settings.getSync("key.titleClass")
+      : "YPqix5",
+    priceClass: settings.hasSync("key.priceClass")
+      ? settings.getSync("key.priceClass")
+      : "X0xUb5",
+    numberClass: settings.hasSync("key.numberClass")
+      ? settings.getSync("key.numberClass")
+      : "MZzIOI",
+    shopClass: settings.hasSync("key.shopClass")
+      ? settings.getSync("key.shopClass")
+      : "U6HLpM",
+  };
+  return data;
+});
+
+ipcMain.on(
+  "setElementClasses",
+  async (e, { titleClass, priceClass, numberClass, shopClass }) => {
+    settings.setSync("key", { titleClass, priceClass, numberClass, shopClass });
+
+    dialog.showMessageBox(null, {
+      message: "Successfully reset all classes",
+    });
+  }
+);
+
+ipcMain.on("api_start_scraping", async (e, { data, cookie, classes }) => {
   // console.log(`data received in main: ${data}`);
   if (isScraping || win === null)
     return console.log("scraping, please wait......");
 
   isScraping = true;
-  await scrape(data, win);
+  // await scrape(data, win);
+  await scrape({ data, cookie, win, classes });
   isScraping = false;
   console.log("done");
+});
+
+ipcMain.on("openBrowserWindow", (e, url) => {
+  // console.log(url);
+  shell.openExternal(url);
 });
 
 ipcMain.on("openModal", (e, data) => {

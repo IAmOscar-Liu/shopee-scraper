@@ -19,7 +19,7 @@ function updateHowToGetCookie(howToGetCookie, shopid, itemid) {
       <span style="cursor: pointer; color: blue; text-decoration: underline; white-space: nowrap; overflow: hidden; display: block; text-overflow: ellipsis;">${apiUrl}</span>
       然後按ctrl + shift + i開啟DevTools<br/>
       1. 在DevTools中選擇Network，按F5重新整理一次<br/>
-      2. 在Network中點選裡面唯一一筆資料，右邊跳出來的視窗選Headers<br/>
+      2. 在Network的Filter欄位輸入get_shipping，然後點選filter後的唯一一筆資料，右邊跳出來的視窗選Headers<br/>
       3. 在Headers中找到Request Headers，然後複製裡面cookie的內容<br/>
       4. 最後，把複製的結果貼到下面的Request Cookie裡面，再按「重設」
     `;
@@ -43,6 +43,20 @@ async function preloadTestUrlAndCookie(
   } catch (e) {
     howToGetCookie.innerText = e.message;
   }
+}
+
+async function preloadElementClasses({
+  productTitleInput,
+  productPriceInput,
+  productNumberInput,
+  productShopInput,
+}) {
+  const { titleClass, priceClass, numberClass, shopClass } =
+    await electron.api.getElementClasses();
+  productTitleInput.value = titleClass;
+  productPriceInput.value = priceClass;
+  productNumberInput.value = numberClass;
+  productShopInput.value = shopClass;
 }
 
 function openBrowserWindow(e) {
@@ -98,8 +112,18 @@ const readGoogleSheetButton = document.getElementById("read-google-sheet");
 const requestUrlInput = document.getElementById("request-url");
 const requestCookieInput = document.getElementById("request-cookie");
 const howToGetCookie = document.getElementById("how-to-get-cookie");
-
 preloadTestUrlAndCookie(requestUrlInput, requestCookieInput, howToGetCookie);
+
+const productTitleInput = document.getElementById("product-name");
+const productPriceInput = document.getElementById("product-price");
+const productNumberInput = document.getElementById("product-number");
+const productShopInput = document.getElementById("product-shop");
+preloadElementClasses({
+  productTitleInput,
+  productPriceInput,
+  productShopInput,
+  productNumberInput,
+});
 
 let writeData;
 let data;
@@ -167,6 +191,15 @@ readGoogleSheetButton.addEventListener("click", async () => {
   startScrapingButton.disabled = false;
 });
 
+document.getElementById("reset-all-classes").addEventListener("click", () => {
+  electron.api.setElementClasses({
+    titleClass: productTitleInput.value,
+    priceClass: productPriceInput.value,
+    numberClass: productNumberInput.value,
+    shopClass: productShopInput.value,
+  });
+});
+
 document.getElementById("reset-url").addEventListener("click", () => {
   electron.api.setTestUrlAndCookie(
     requestUrlInput.value,
@@ -194,6 +227,12 @@ startScrapingButton.addEventListener("click", (e) => {
   electron.api.startScraping("api_start_scraping", {
     data,
     cookie: requestCookieInput.value,
+    classes: {
+      titleClass: productTitleInput.value,
+      priceClass: productPriceInput.value,
+      numberClass: productNumberInput.value,
+      shopClass: productShopInput.value,
+    },
   });
 });
 
@@ -208,9 +247,12 @@ electron.api.on("receive_data", (receiveData) => {
   );
 
   if (
-    receiveData.type === "start new product" ||
-    receiveData.type === "item results" ||
-    receiveData.type === "shipping info"
+    [
+      "start new product",
+      "find monthly sales",
+      "item results",
+      "shipping info",
+    ].includes(receiveData.type)
   ) {
     if (receiveData.type === "item results") {
       data[receiveData.product_idx]["商品全名"] = receiveData.payload.title;

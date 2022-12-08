@@ -9,6 +9,12 @@ contextBridge.exposeInMainWorld("electron", {
     setTestUrlAndCookie: (url, cookie) => {
       ipcRenderer.send("setTestUrlAndCookie", url, cookie);
     },
+    getElementClasses: async () => {
+      return ipcRenderer.invoke("getElementClasses");
+    },
+    setElementClasses: (classes) => {
+      ipcRenderer.send("setElementClasses", classes);
+    },
     readExcelFile: () => {
       return ipcRenderer.invoke("read-excel-file");
     },
@@ -16,7 +22,7 @@ contextBridge.exposeInMainWorld("electron", {
       return ipcRenderer.invoke("read-google-sheet", url);
     },
     openBrowserWindow: (url) => {
-      shell.openExternal(url);
+      ipcRenderer.send("openBrowserWindow", url);
     },
     startScraping: (channel, data) => {
       ipcRenderer.send(channel, data);

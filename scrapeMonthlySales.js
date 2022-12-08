@@ -1,4 +1,4 @@
-const scrapeMonthlySales = async (product_idx, win, page, title, shopClass) => {
+const scrapeMonthlySales = async ({ page, title, shopClass }) => {
   try {
     const shopBtnPath = `.${shopClass} > a`;
 
@@ -13,8 +13,22 @@ const scrapeMonthlySales = async (product_idx, win, page, title, shopClass) => {
     await page.keyboard.press("Enter");
 
     const itemPath = ".shopee-search-item-result__item";
+    const noItemPath = ".shopee-search-empty-result-section__title";
 
-    await page.waitForSelector(itemPath);
+    await Promise.race([
+      page.waitForSelector(itemPath).then(() => true),
+      page.waitForSelector(noItemPath).then(() => false),
+      new Promise((resolve, reject) => {
+        // Reject after 5 seconds
+        setTimeout(() => reject(new Error("Request timed out")), 5000);
+      }),
+    ])
+      .then((hasResult) => {
+        if (!hasResult) throw new Error("No Result");
+      })
+      .catch((e) => {
+        throw e;
+      });
 
     const sortBySalesBtn = await page.$(
       ".shopee-sort-by-options > *:nth-of-type(3)"
@@ -24,7 +38,7 @@ const scrapeMonthlySales = async (product_idx, win, page, title, shopClass) => {
 
     await sortBySalesBtn.click();
 
-    await page.waitForSelector(itemPath);
+    await page.waitForSelector(itemPath, { timeout: 5000 });
 
     const salesResults = await page.$$(itemPath);
     if (!salesResults || salesResults.length === 0)
@@ -40,28 +54,15 @@ const scrapeMonthlySales = async (product_idx, win, page, title, shopClass) => {
       .replace("月銷量", "")
       .replaceAll(" ", "");
 
-    win.webContents.send("receive_data", {
-      product_idx,
-      type: "monthly sales",
-      payload: {
-        fullContent: monthlySales,
-        sales: salesNumber || "找不到",
-      },
-      msg: "done",
-      msgColor: "green",
-    });
+    return {
+      error: null,
+      data: { fullContent: monthlySales, sales: salesNumber || "找不到" },
+    };
   } catch (error) {
-    win.webContents.send("receive_data", {
-      product_idx,
-      type: "monthly sales",
-      payload: {
-        fullContent: error.message,
-        sales: "找不到",
-        shopClass,
-      },
-      msg: "done",
-      msgColor: "green",
-    });
+    return {
+      error: error.message,
+      data: { fullContent: "找不到", sales: "找不到" },
+    };
   }
 };
 

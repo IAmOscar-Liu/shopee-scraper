@@ -21,10 +21,12 @@
     "electron-settings": "^4.0.2",
     "google-spreadsheet": "^3.3.0",
     "isomorphic-fetch": "^3.0.0",
+    "puppeteer": "^19.4.0",
+    "puppeteer-core": "^19.4.0",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
-    "electron": "^11.1.1",
+    "electron": "^22.0.0",
     "electron-builder": "^22.9.1"
   }
 }
